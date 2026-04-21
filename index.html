@@ -136,41 +136,12 @@ aside{font-size:15px}
 .community li::before{content:"—";color:var(--accent);font-weight:600;position:absolute;left:0;top:0}
 .community li strong{font-weight:600}
 
-/* ---------- Adaptive Card demo ---------- */
-.ac-feature{margin:20px 0;padding:16px;background:var(--card-bg);
-  border:1px solid var(--card-border);border-radius:10px}
-.ac-feature .ac-head{font-family:'JetBrains Mono',monospace;font-size:10.5px;
-  letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
-.ac-card{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);
-  border:1px solid var(--rule);border-radius:6px;padding:14px;font-size:13px;line-height:1.4}
-.ac-card .ac-title{font-weight:600;font-size:15px;margin-bottom:2px;color:var(--ink)}
-.ac-card .ac-sub{color:var(--muted);font-size:12px;margin-bottom:10px}
-.ac-card .ac-facts{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;
-  font-size:12.5px;margin-bottom:10px;padding:8px 0;border-top:1px solid var(--rule);
-  border-bottom:1px solid var(--rule)}
-.ac-card .ac-facts dt{color:var(--muted);font-weight:500}
-.ac-card .ac-facts dd{margin:0;color:var(--ink)}
-.ac-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
-.ac-btn{font-family:'Segoe UI',system-ui,sans-serif;font-size:12px;padding:6px 12px;
-  border-radius:4px;border:1px solid var(--rule);background:transparent;color:var(--ink);cursor:pointer}
-.ac-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-.ac-toggle{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;
-  background:transparent;border:0;color:var(--muted);cursor:pointer;padding:4px 0;
-  text-decoration:underline;text-underline-offset:3px}
-.ac-toggle:hover{color:var(--accent)}
-.ac-json{display:none;margin-top:10px;background:var(--bg);border:1px solid var(--rule);
-  border-radius:6px;padding:10px;font-family:'JetBrains Mono',monospace;font-size:10.5px;
-  line-height:1.5;color:var(--ink);white-space:pre;overflow-x:auto;max-height:280px;overflow-y:auto}
-.ac-json.open{display:block}
-
-/* footer */
-footer{max-width:1200px;margin:48px auto 0;padding-top:20px;border-top:1px solid var(--rule);
-  font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);text-align:center}
-
 /* empty state */
 .empty-state{display:none;padding:20px;border:1px dashed var(--rule);border-radius:8px;
   color:var(--muted);font-size:14px;text-align:center;margin-top:8px}
 .empty-state.on{display:block}
+.reset-link{background:transparent;border:0;color:var(--accent);cursor:pointer;
+  font:inherit;text-decoration:underline;text-underline-offset:3px;padding:0}
 
 /* ---------- mobile ---------- */
 @media (max-width:760px){
@@ -195,7 +166,7 @@ footer{max-width:1200px;margin:48px auto 0;padding-top:20px;border-top:1px solid
   :root{--bg:#fff;--ink:#000;--muted:#444;--rule:#ccc;--accent:#000;
     --chip-bg:transparent;--chip-border:#ccc;--card-bg:#fff;--card-border:#ccc}
   body{padding:0.5in 0.5in;font-size:10pt}
-  .chrome,.filter-bar,.ac-feature,.ac-toggle,.empty-state{display:none !important}
+  .chrome,.filter-bar,.empty-state{display:none !important}
   .masthead{border-bottom-color:#000}
   .body-grid{gap:24px}
   .name{font-size:28pt}
@@ -258,7 +229,7 @@ footer{max-width:1200px;margin:48px auto 0;padding-top:20px;border-top:1px solid
       <button class="chip" data-skill="leadership">Leadership<span class="count"></span></button>
       <button class="chip" data-skill="coaching">Coaching<span class="count"></span></button>
     </div>
-    <div class="empty-state" id="empty-state">No bullets match the selected filters. <button class="ac-toggle" type="button" onclick="window.__reset()">Reset</button></div>
+    <div class="empty-state" id="empty-state">No bullets match the selected filters. <button type="button" class="reset-link" onclick="window.__reset()">Reset</button></div>
   </div>
 
   <div class="body-grid">
@@ -332,63 +303,6 @@ footer{max-width:1200px;margin:48px auto 0;padding-top:20px;border-top:1px solid
         <span class="award-body">T-Mobile's highest honor. Awarded to only ~0.03% of ~75,000 employees. Received an all-expenses-paid trip to Hawaii for the impact of my workflows.</span>
       </div>
 
-      <section class="ac-feature" aria-label="Adaptive Card demo">
-        <div class="ac-head">Featured · Adaptive Card in Production</div>
-        <div class="ac-card">
-          <div class="ac-title">VIP Escalation — New Ticket</div>
-          <div class="ac-sub">Submitted via Microsoft Forms · routed by Power Automate</div>
-          <dl class="ac-facts">
-            <dt>Priority</dt><dd><strong style="color:var(--accent)">P1 · VIP</strong></dd>
-            <dt>Submitter</dt><dd>Exec Comms Team</dd>
-            <dt>Customer</dt><dd>[REDACTED]</dd>
-            <dt>SLA</dt><dd>30 min</dd>
-          </dl>
-          <div class="ac-actions">
-            <button class="ac-btn primary" type="button" aria-label="Demo only">Claim</button>
-            <button class="ac-btn" type="button" aria-label="Demo only">Assign</button>
-            <button class="ac-btn" type="button" aria-label="Demo only">View in SharePoint</button>
-          </div>
-        </div>
-        <button class="ac-toggle" type="button" id="ac-json-btn" aria-expanded="false" aria-controls="ac-json">View JSON ↓</button>
-<pre class="ac-json" id="ac-json" aria-hidden="true">{
-  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-  "type": "AdaptiveCard",
-  "version": "1.5",
-  "body": [
-    {
-      "type": "TextBlock",
-      "text": "VIP Escalation — New Ticket",
-      "weight": "Bolder",
-      "size": "Medium"
-    },
-    {
-      "type": "TextBlock",
-      "text": "Submitted via Microsoft Forms · routed by Power Automate",
-      "isSubtle": true,
-      "spacing": "None",
-      "wrap": true
-    },
-    {
-      "type": "FactSet",
-      "facts": [
-        { "title": "Priority",  "value": "P1 · VIP" },
-        { "title": "Submitter", "value": "Exec Comms Team" },
-        { "title": "Customer",  "value": "[REDACTED]" },
-        { "title": "SLA",       "value": "30 min" }
-      ]
-    }
-  ],
-  "actions": [
-    { "type": "Action.Submit", "title": "Claim",
-      "data": { "op": "claim" }, "style": "positive" },
-    { "type": "Action.Submit", "title": "Assign",
-      "data": { "op": "assign" } },
-    { "type": "Action.OpenUrl", "title": "View in SharePoint",
-      "url": "https://example.sharepoint.com/sites/execcare/Lists/VIP" }
-  ]
-}</pre>
-      </section>
-
       <section class="skills-block">
         <div class="skill-group">
           <h2>Daily AI Stack</h2>
@@ -439,10 +353,6 @@ footer{max-width:1200px;margin:48px auto 0;padding-top:20px;border-top:1px solid
     </aside>
   </div>
 </main>
-
-<footer>
-  Built with HTML, CSS, vanilla JS, and a little help from Claude. No tracking. No build step.
-</footer>
 
 <script>
 (function(){
@@ -554,15 +464,6 @@ footer{max-width:1200px;margin:48px auto 0;padding-top:20px;border-top:1px solid
   }
 
   window.__reset=reset;
-
-  // ---------- Adaptive Card JSON toggle ----------
-  var acBtn=document.getElementById('ac-json-btn'), acJson=document.getElementById('ac-json');
-  acBtn.addEventListener('click',function(){
-    var open=acJson.classList.toggle('open');
-    acJson.setAttribute('aria-hidden',open?'false':'true');
-    acBtn.setAttribute('aria-expanded',open?'true':'false');
-    acBtn.textContent=open?'Hide JSON ↑':'View JSON ↓';
-  });
 })();
 </script>
 </body>
