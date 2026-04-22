@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CYBERPONG // NEON GRID</title>
+<style>
+  :root {
+    --neon-pink: #ff2a6d;
+    --neon-cyan: #05d9e8;
+    --neon-purple: #b967ff;
+    --neon-yellow: #f9f871;
+    --bg-deep: #0d0221;
+    --bg-mid:  #1a0b3b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: radial-gradient(ellipse at center, var(--bg-mid) 0%, var(--bg-deep) 70%, #000 100%);
+    color: var(--neon-cyan);
+    font-family: "Courier New", monospace;
+    overflow: hidden;
+    user-select: none;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    position: relative;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        rgba(5, 217, 232, 0.04) 0px,
+        rgba(5, 217, 232, 0.04) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    z-index: 10;
+  }
+  canvas {
+    display: block;
+    background: #000;
+    border: 2px solid var(--neon-pink);
+    box-shadow:
+      0 0 20px var(--neon-pink),
+      0 0 40px rgba(255, 42, 109, 0.4),
+      inset 0 0 30px rgba(185, 103, 255, 0.15);
+    image-rendering: pixelated;
+    max-width: 95vw;
+    max-height: 80vh;
+  }
+  .hud {
+    margin-top: 16px;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--neon-purple);
+    text-shadow: 0 0 8px var(--neon-purple);
+    text-align: center;
+  }
+  .hud .key {
+    color: var(--neon-yellow);
+    text-shadow: 0 0 6px var(--neon-yellow);
+  }
+  .title-bar {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 10px var(--neon-cyan);
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+  <div class="title-bar">// NEON GRID SECTOR 7 //</div>
+  <canvas id="game" width="960" height="600"></canvas>
+  <div class="hud">
+    <span class="key">W/S</span> P1 &nbsp; · &nbsp;
+    <span class="key">&uarr;/&darr;</span> P2 &nbsp; · &nbsp;
+    <span class="key">M</span> MUTE &nbsp; · &nbsp;
+    <span class="key">ESC</span> MENU
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // ---------- Audio (procedural 8-bit) ----------
+  let audioCtx = null;
+  let masterGain = null;
+  let muted = false;
+  let musicTimer = null;
+  let musicStep = 0;
+
+  function initAudio() {
+    if (audioCtx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AC();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.25;
+    masterGain.connect(audioCtx.destination);
+  }
+
+  // Square-wave blip (classic 8-bit)
+  function blip(freq, duration = 0.08, type = "square", vol = 0.35) {
+    if (!audioCtx || muted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  }
+
+  function sfxPaddle() { blip(660, 0.06, "square", 0.3); }
+  function sfxWall()   { blip(330, 0.06, "square", 0.25); }
+  function sfxScore()  {
+    blip(880, 0.1, "square", 0.35);
+    setTimeout(() => blip(1320, 0.15, "square", 0.3), 90);
+  }
+  function sfxSelect() { blip(520, 0.05, "square", 0.2); }
+  function sfxStart()  {
+    blip(523, 0.08); setTimeout(() => blip(659, 0.08), 80);
+    setTimeout(() => blip(784, 0.08), 160);
+    setTimeout(() => blip(1046, 0.15), 240);
+  }
+
+  // Looping chiptune bassline + lead (A minor-ish, dark synth vibe)
+  // Freq table (A2 = 110)
+  const NOTE = { A2:110, C3:130.81, D3:146.83, E3:164.81, F3:174.61, G3:196,
+                 A3:220, C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392,
+                 A4:440, B4:493.88, C5:523.25, D5:587.33, E5:659.25, F5:698.46,
+                 G5:783.99, A5:880, REST:0 };
+
+  // 16-step patterns, dark/driving cyberpunk mood
+  const bassline = [
+    NOTE.A2, NOTE.A2, NOTE.A3, NOTE.A2,
+    NOTE.G2 || 98, NOTE.A2, NOTE.E3, NOTE.A2,
+    NOTE.F3, NOTE.F3, NOTE.C3, NOTE.F3,
+    NOTE.E3, NOTE.E3, NOTE.B3 || 246.94, NOTE.E3,
+  ];
+  const lead = [
+    NOTE.A4, NOTE.REST, NOTE.C5, NOTE.REST,
+    NOTE.E5, NOTE.D5, NOTE.C5, NOTE.REST,
+    NOTE.F5, NOTE.REST, NOTE.E5, NOTE.REST,
+    NOTE.D5, NOTE.C5, NOTE.B4, NOTE.A4,
+  ];
+
+  function playStep() {
+    if (muted || !audioCtx) return;
+    const i = musicStep % 16;
+    const bassFreq = bassline[i];
+    const leadFreq = lead[i];
+    if (bassFreq) blip(bassFreq, 0.14, "triangle", 0.22);
+    if (leadFreq) blip(leadFreq, 0.11, "square", 0.12);
+    // hi-hat-ish noise every other step
+    if (i % 2 === 0) noiseTick();
+    musicStep++;
+  }
+
+  function noiseTick() {
+    if (!audioCtx || muted) return;
+    const bufferSize = audioCtx.sampleRate * 0.04;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
+    const src = audioCtx.createBufferSource();
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.05);
+    src.buffer = buffer;
+    src.connect(g); g.connect(masterGain);
+    src.start();
+  }
+
+  function startMusic() {
+    stopMusic();
+    musicStep = 0;
+    // 125 BPM, 16th notes = ~120ms
+    musicTimer = setInterval(playStep, 120);
+  }
+  function stopMusic() {
+    if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+  }
+
+  // ---------- Game state ----------
+  const STATE = { MENU: "menu", PLAYING: "playing", GAMEOVER: "gameover" };
+  let state = STATE.MENU;
+
+  const MODE = { ONE_PLAYER: "1P vs CPU", TWO_PLAYER: "2P LOCAL" };
+  let mode = MODE.ONE_PLAYER;
+
+  const menuItems = [
+    { label: "START GAME", action: () => startGame() },
+    { label: "MODE:", dynamic: () => mode, toggle: () => { mode = mode === MODE.ONE_PLAYER ? MODE.TWO_PLAYER : MODE.ONE_PLAYER; } },
+    { label: "SOUND:", dynamic: () => muted ? "OFF" : "ON", toggle: () => { muted = !muted; } },
+  ];
+  let menuIndex = 0;
+
+  const WIN_SCORE = 7;
+
+  const paddle = (x) => ({
+    x, y: H / 2 - 50, w: 14, h: 100,
+    vy: 0, speed: 7, score: 0,
+  });
+  let p1 = paddle(30);
+  let p2 = paddle(W - 44);
+
+  const ball = { x: W / 2, y: H / 2, vx: 6, vy: 3, r: 9, trail: [] };
+
+  function resetBall(dir = Math.random() < 0.5 ? -1 : 1) {
+    ball.x = W / 2; ball.y = H / 2;
+    const angle = (Math.random() * 0.6 - 0.3); // small vertical
+    const speed = 6;
+    ball.vx = Math.cos(angle) * speed * dir;
+    ball.vy = Math.sin(angle) * speed;
+    ball.trail = [];
+  }
+
+  function resetMatch() {
+    p1.score = 0; p2.score = 0;
+    p1.y = H / 2 - 50; p2.y = H / 2 - 50;
+    resetBall();
+  }
+
+  function startGame() {
+    initAudio();
+    resetMatch();
+    state = STATE.PLAYING;
+    sfxStart();
+    startMusic();
+  }
+
+  // ---------- Input ----------
+  const keys = {};
+  window.addEventListener("keydown", (e) => {
+    keys[e.key.toLowerCase()] = true;
+
+    if (state === STATE.MENU) {
+      if (e.key === "ArrowUp")   { menuIndex = (menuIndex + menuItems.length - 1) % menuItems.length; sfxSelect(); }
+      if (e.key === "ArrowDown") { menuIndex = (menuIndex + 1) % menuItems.length; sfxSelect(); }
+      if (e.key === "Enter" || e.key === " ") {
+        const item = menuItems[menuIndex];
+        initAudio();
+        if (item.action) item.action();
+        else if (item.toggle) { item.toggle(); sfxSelect(); }
+      }
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        const item = menuItems[menuIndex];
+        if (item.toggle) { item.toggle(); sfxSelect(); }
+      }
+    } else if (state === STATE.PLAYING) {
+      if (e.key === "Escape") { state = STATE.MENU; stopMusic(); }
+      if (e.key.toLowerCase() === "m") { muted = !muted; }
+    } else if (state === STATE.GAMEOVER) {
+      if (e.key === "Enter" || e.key === " ") { state = STATE.MENU; stopMusic(); }
+    }
+
+    // prevent page scroll on arrows/space
+    if ([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
+
+  // ---------- Update ----------
+  function update() {
+    if (state !== STATE.PLAYING) return;
+
+    // P1 input
+    if (keys["w"]) p1.y -= p1.speed;
+    if (keys["s"]) p1.y += p1.speed;
+
+    // P2 input
+    if (mode === MODE.TWO_PLAYER) {
+      if (keys["arrowup"])   p2.y -= p2.speed;
+      if (keys["arrowdown"]) p2.y += p2.speed;
+    } else {
+      // CPU AI — tracks ball with slight delay/imperfection
+      const target = ball.y - p2.h / 2;
+      const diff = target - p2.y;
+      const maxSpeed = 5.2;
+      if (Math.abs(diff) > 6) p2.y += Math.sign(diff) * Math.min(maxSpeed, Math.abs(diff));
+    }
+
+    // Clamp paddles
+    p1.y = Math.max(0, Math.min(H - p1.h, p1.y));
+    p2.y = Math.max(0, Math.min(H - p2.h, p2.y));
+
+    // Ball trail
+    ball.trail.push({ x: ball.x, y: ball.y });
+    if (ball.trail.length > 12) ball.trail.shift();
+
+    // Ball move
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // Top/bottom walls
+    if (ball.y - ball.r <= 0) { ball.y = ball.r; ball.vy *= -1; sfxWall(); }
+    if (ball.y + ball.r >= H) { ball.y = H - ball.r; ball.vy *= -1; sfxWall(); }
+
+    // Paddle collisions
+    function hit(pad) {
+      return ball.x - ball.r < pad.x + pad.w &&
+             ball.x + ball.r > pad.x &&
+             ball.y + ball.r > pad.y &&
+             ball.y - ball.r < pad.y + pad.h;
+    }
+
+    if (ball.vx < 0 && hit(p1)) {
+      ball.x = p1.x + p1.w + ball.r;
+      const rel = (ball.y - (p1.y + p1.h / 2)) / (p1.h / 2);
+      const angle = rel * (Math.PI / 3.5);
+      const speed = Math.min(Math.hypot(ball.vx, ball.vy) * 1.05, 14);
+      ball.vx = Math.abs(Math.cos(angle) * speed);
+      ball.vy = Math.sin(angle) * speed;
+      sfxPaddle();
+    }
+    if (ball.vx > 0 && hit(p2)) {
+      ball.x = p2.x - ball.r;
+      const rel = (ball.y - (p2.y + p2.h / 2)) / (p2.h / 2);
+      const angle = rel * (Math.PI / 3.5);
+      const speed = Math.min(Math.hypot(ball.vx, ball.vy) * 1.05, 14);
+      ball.vx = -Math.abs(Math.cos(angle) * speed);
+      ball.vy = Math.sin(angle) * speed;
+      sfxPaddle();
+    }
+
+    // Score
+    if (ball.x < -20) { p2.score++; sfxScore(); checkWin(); resetBall(1); }
+    if (ball.x > W + 20) { p1.score++; sfxScore(); checkWin(); resetBall(-1); }
+  }
+
+  function checkWin() {
+    if (p1.score >= WIN_SCORE || p2.score >= WIN_SCORE) {
+      state = STATE.GAMEOVER;
+      stopMusic();
+    }
+  }
+
+  // ---------- Render ----------
+  function drawGrid() {
+    ctx.save();
+    ctx.strokeStyle = "rgba(185, 103, 255, 0.12)";
+    ctx.lineWidth = 1;
+    const step = 40;
+    for (let x = 0; x <= W; x += step) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y <= H; y += step) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    // horizon glow
+    const grad = ctx.createLinearGradient(0, H * 0.5, 0, H);
+    grad.addColorStop(0, "rgba(255, 42, 109, 0)");
+    grad.addColorStop(1, "rgba(255, 42, 109, 0.1)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, H * 0.5, W, H * 0.5);
+    ctx.restore();
+  }
+
+  function drawCenterLine() {
+    ctx.save();
+    ctx.strokeStyle = "rgba(5, 217, 232, 0.4)";
+    ctx.shadowColor = "#05d9e8";
+    ctx.shadowBlur = 12;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([12, 14]);
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 0);
+    ctx.lineTo(W / 2, H);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawGlowRect(x, y, w, h, color) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 25;
+    ctx.fillRect(x, y, w, h);
+    ctx.shadowBlur = 50;
+    ctx.fillRect(x, y, w, h);
+    ctx.restore();
+  }
+
+  function drawBall() {
+    // trail
+    for (let i = 0; i < ball.trail.length; i++) {
+      const t = ball.trail[i];
+      const alpha = (i / ball.trail.length) * 0.5;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#f9f871";
+      ctx.shadowColor = "#f9f871";
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, ball.r * (i / ball.trail.length), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    // ball
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "#f9f871";
+    ctx.shadowBlur = 30;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawScore() {
+    ctx.save();
+    ctx.font = "bold 72px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.fillStyle = "#05d9e8";
+    ctx.shadowColor = "#05d9e8";
+    ctx.shadowBlur = 20;
+    ctx.fillText(p1.score, W * 0.25, 80);
+
+    ctx.fillStyle = "#ff2a6d";
+    ctx.shadowColor = "#ff2a6d";
+    ctx.shadowBlur = 20;
+    ctx.fillText(p2.score, W * 0.75, 80);
+    ctx.restore();
+  }
+
+  function drawPlayLabels() {
+    ctx.save();
+    ctx.font = "12px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(5, 217, 232, 0.6)";
+    ctx.fillText("P1", W * 0.25, 120);
+    ctx.fillStyle = "rgba(255, 42, 109, 0.6)";
+    ctx.fillText(mode === MODE.ONE_PLAYER ? "CPU" : "P2", W * 0.75, 120);
+    ctx.restore();
+  }
+
+  function drawMenu() {
+    // title
+    ctx.save();
+    ctx.textAlign = "center";
+
+    // big title with glitch-ish layers
+    ctx.font = "bold 96px 'Courier New', monospace";
+    ctx.fillStyle = "#ff2a6d";
+    ctx.shadowColor = "#ff2a6d";
+    ctx.shadowBlur = 30;
+    ctx.fillText("CYBERPONG", W / 2 + 3, 180);
+
+    ctx.fillStyle = "#05d9e8";
+    ctx.shadowColor = "#05d9e8";
+    ctx.shadowBlur = 30;
+    ctx.fillText("CYBERPONG", W / 2 - 3, 180);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "#b967ff";
+    ctx.shadowBlur = 20;
+    ctx.fillText("CYBERPONG", W / 2, 180);
+
+    // subtitle
+    ctx.font = "16px 'Courier New', monospace";
+    ctx.fillStyle = "#b967ff";
+    ctx.shadowColor = "#b967ff";
+    ctx.shadowBlur = 12;
+    ctx.fillText("// NEON GRID PROTOCOL v1.0 //", W / 2, 220);
+
+    // menu items
+    ctx.font = "bold 28px 'Courier New', monospace";
+    menuItems.forEach((item, i) => {
+      const y = 320 + i * 56;
+      const selected = i === menuIndex;
+      const text = item.dynamic
+        ? `${item.label} ${item.dynamic()}`
+        : item.label;
+
+      if (selected) {
+        ctx.fillStyle = "#f9f871";
+        ctx.shadowColor = "#f9f871";
+        ctx.shadowBlur = 20;
+        ctx.fillText("> " + text + " <", W / 2, y);
+      } else {
+        ctx.fillStyle = "#05d9e8";
+        ctx.shadowColor = "#05d9e8";
+        ctx.shadowBlur = 10;
+        ctx.fillText(text, W / 2, y);
+      }
+    });
+
+    // hint
+    ctx.font = "12px 'Courier New', monospace";
+    ctx.fillStyle = "rgba(185, 103, 255, 0.7)";
+    ctx.shadowBlur = 0;
+    ctx.fillText("[ UP/DOWN TO NAVIGATE · ENTER TO SELECT · LEFT/RIGHT TO TOGGLE ]", W / 2, H - 40);
+
+    ctx.restore();
+  }
+
+  function drawGameOver() {
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.textAlign = "center";
+    ctx.font = "bold 64px 'Courier New', monospace";
+
+    const winner = p1.score >= WIN_SCORE ? "P1" : (mode === MODE.ONE_PLAYER ? "CPU" : "P2");
+    const color = p1.score >= WIN_SCORE ? "#05d9e8" : "#ff2a6d";
+
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 30;
+    ctx.fillText(`${winner} WINS`, W / 2, H / 2 - 20);
+
+    ctx.font = "20px 'Courier New', monospace";
+    ctx.fillStyle = "#f9f871";
+    ctx.shadowColor = "#f9f871";
+    ctx.shadowBlur = 15;
+    ctx.fillText(`${p1.score} — ${p2.score}`, W / 2, H / 2 + 30);
+
+    ctx.font = "14px 'Courier New', monospace";
+    ctx.fillStyle = "#b967ff";
+    ctx.shadowBlur = 10;
+    ctx.fillText("[ PRESS ENTER FOR MENU ]", W / 2, H / 2 + 80);
+    ctx.restore();
+  }
+
+  function render() {
+    // bg
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+    drawGrid();
+
+    if (state === STATE.MENU) {
+      drawMenu();
+      return;
+    }
+
+    drawCenterLine();
+    drawScore();
+    drawPlayLabels();
+    drawGlowRect(p1.x, p1.y, p1.w, p1.h, "#05d9e8");
+    drawGlowRect(p2.x, p2.y, p2.w, p2.h, "#ff2a6d");
+    drawBall();
+
+    if (state === STATE.GAMEOVER) drawGameOver();
+  }
+
+  // ---------- Loop ----------
+  function loop() {
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  // pixelated canvas text
+  ctx.imageSmoothingEnabled = false;
+  loop();
+})();
+</script>
+</body>
+</html>
