@@ -4,6 +4,8 @@
 
 **Personal portfolio — an interactive, filterable web version of my resume.**
 
+### 👉 [Click here to check it out](https://ephox1.github.io/) 👈
+
 [![Live](https://img.shields.io/badge/live-ephox1.github.io-e8755c?style=flat-square&logo=githubpages&logoColor=white)](https://ephox1.github.io)
 [![Deploy](https://img.shields.io/badge/GitHub%20Pages-deployed-2ea44f?style=flat-square&logo=github)](https://github.com/Ephox1/Ephox1.github.io/deployments)
 [![No build step](https://img.shields.io/badge/build-none-17120e?style=flat-square)](#stack)
