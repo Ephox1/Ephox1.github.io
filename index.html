@@ -71,7 +71,7 @@ main{max-width:1200px;margin:0 auto}
 .logo-mark svg{width:100%;height:100%;display:block}
 
 /* summary */
-.summary{font-size:clamp(16px,1.6vw,19px);line-height:1.5;margin:0 0 24px;max-width:780px}
+.summary{font-size:clamp(16px,1.6vw,19px);line-height:1.55;margin:0 0 24px}
 .summary strong{font-weight:600}
 
 /* chips */
@@ -143,6 +143,36 @@ aside{font-size:15px}
 .reset-link{background:transparent;border:0;color:var(--accent);cursor:pointer;
   font:inherit;text-decoration:underline;text-underline-offset:3px;padding:0}
 
+/* ---------- live projects ---------- */
+.projects{margin-top:56px;padding-top:28px;border-top:2px solid var(--ink)}
+.projects h2{font-family:Fraunces,serif;font-size:20px;font-weight:700;
+  color:var(--accent);margin:0 0 6px;text-align:center;
+  text-transform:none;letter-spacing:normal;border-bottom:0;padding-bottom:0}
+.project-intro{font-size:14px;font-style:italic;color:var(--ink);
+  text-align:center;margin:0 auto 20px;max-width:640px;line-height:1.5}
+.project-tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.project-tab,.project-open{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;
+  padding:7px 14px;background:var(--chip-bg);border:1px solid var(--chip-border);
+  border-radius:999px;color:var(--ink);cursor:pointer;white-space:nowrap;
+  text-decoration:none;display:inline-flex;align-items:center;gap:6px;
+  transition:background .2s,color .2s,border-color .2s}
+.project-tab:hover,.project-open:hover{border-color:var(--accent);color:var(--accent)}
+.project-tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.project-open{margin-left:auto}
+.project-stage{position:relative;width:100%;height:680px;background:#0a0a0a;
+  border:1px solid var(--card-border);border-radius:12px;overflow:hidden;
+  box-shadow:0 10px 40px rgba(0,0,0,.15)}
+.project-stage iframe{width:100%;height:100%;border:0;display:block;background:#0a0a0a}
+.project-hint{position:absolute;inset:0;display:flex;flex-direction:column;gap:4px;
+  align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:13px;color:#7ee787;
+  background:rgba(10,10,10,.78);cursor:pointer;letter-spacing:.1em;
+  text-shadow:0 0 4px currentColor;z-index:2;border:0;
+  transition:opacity .25s ease}
+.project-hint .hint-sub{font-size:10.5px;color:#2f6f3b;letter-spacing:.18em;text-transform:uppercase}
+.project-hint.off{opacity:0;pointer-events:none}
+.project-fallback{display:none}
+
 /* ---------- mobile ---------- */
 @media (max-width:760px){
   body{padding:0 18px 48px}
@@ -153,6 +183,15 @@ aside{font-size:15px}
   .body-grid{grid-template-columns:1fr;gap:28px}
   .chip-row{flex-wrap:nowrap}
   .role-head{flex-direction:column;gap:2px}
+  .project-stage{display:none}
+  .project-tabs{display:none}
+  .project-fallback{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .project-fallback a{display:flex;justify-content:space-between;align-items:center;
+    padding:14px 16px;background:var(--chip-bg);border:1px solid var(--chip-border);
+    border-radius:10px;text-decoration:none;font-family:'JetBrains Mono',monospace;
+    font-size:13px;color:var(--ink)}
+  .project-fallback a:hover{border-color:var(--accent);color:var(--accent)}
+  .project-fallback .arrow{color:var(--muted);font-size:14px}
 }
 
 /* ---------- view transitions ---------- */
@@ -352,6 +391,34 @@ aside{font-size:15px}
       </section>
     </aside>
   </div>
+
+  <section class="projects" aria-label="Live projects">
+    <h2>Live Projects</h2>
+    <p class="project-intro">Interactive demos and mini-projects. Play right here, or open full-screen.</p>
+    <div class="project-tabs" role="tablist">
+      <button class="project-tab on" role="tab" aria-selected="true"
+        data-src="https://ephox1.github.io/Phosphor_Snake/" data-title="Phosphor Snake">Phosphor Snake</button>
+      <button class="project-tab" role="tab" aria-selected="false"
+        data-src="https://ephox1.github.io/CyberPong/" data-title="CyberPong">CyberPong</button>
+      <button class="project-tab" role="tab" aria-selected="false"
+        data-src="https://ephox1.github.io/Ember-Stretching-App/" data-title="Ember Stretching">Ember Stretching</button>
+      <a class="project-open" id="project-open" href="https://ephox1.github.io/Phosphor_Snake/"
+        target="_blank" rel="noopener">Open full-screen ↗</a>
+    </div>
+    <div class="project-stage">
+      <button class="project-hint" id="project-hint" type="button" aria-label="Click to play">
+        <span>click to play ▸</span>
+        <span class="hint-sub">keyboard focus</span>
+      </button>
+      <iframe id="project-frame" src="https://ephox1.github.io/Phosphor_Snake/"
+        title="Phosphor Snake" loading="lazy"></iframe>
+    </div>
+    <div class="project-fallback">
+      <a href="https://ephox1.github.io/Phosphor_Snake/" target="_blank" rel="noopener">▶ Phosphor Snake <span class="arrow">↗</span></a>
+      <a href="https://ephox1.github.io/CyberPong/" target="_blank" rel="noopener">▶ CyberPong <span class="arrow">↗</span></a>
+      <a href="https://ephox1.github.io/Ember-Stretching-App/" target="_blank" rel="noopener">▶ Ember Stretching <span class="arrow">↗</span></a>
+    </div>
+  </section>
 </main>
 
 <script>
@@ -464,6 +531,33 @@ aside{font-size:15px}
   }
 
   window.__reset=reset;
+
+  // ---------- live projects ----------
+  var pTabs=document.querySelectorAll('.project-tab');
+  var pFrame=document.getElementById('project-frame');
+  var pOpen=document.getElementById('project-open');
+  var pHint=document.getElementById('project-hint');
+  pTabs.forEach(function(t){
+    t.addEventListener('click',function(){
+      var src=t.getAttribute('data-src');
+      var title=t.getAttribute('data-title')||t.textContent.trim();
+      pTabs.forEach(function(x){
+        x.classList.remove('on');
+        x.setAttribute('aria-selected','false');
+      });
+      t.classList.add('on');
+      t.setAttribute('aria-selected','true');
+      if(pFrame.src!==src){pFrame.src=src;pFrame.title=title;}
+      pOpen.href=src;
+      if(pHint) pHint.classList.remove('off');
+    });
+  });
+  if(pHint){
+    pHint.addEventListener('click',function(){
+      pHint.classList.add('off');
+      try{pFrame.focus();if(pFrame.contentWindow)pFrame.contentWindow.focus();}catch(e){}
+    });
+  }
 })();
 </script>
 </body>
